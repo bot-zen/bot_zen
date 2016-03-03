@@ -1,3 +1,4 @@
+import bz2
 import re
 
 from itertools import islice
@@ -5,21 +6,36 @@ from os import path
 
 import numpy as np
 
+from gensim.models.word2vec import Word2Vec
+
 # when using ipython
 # %load_ext autoreload
 # %autoreload 2
 
+def load_w2vs():
+    """
+    Load the preprocessed word2vec data for the empirist task.
+
+    Returns:
+        w2v_emp, w2v_big
+
+        w2v_emp: trained on the empirist trainig data
+        w2v_big: trained on big wikipedia data
+    """
+    w2v_emp = Word2Vec.load_word2vec_format('empirist.bin')
+    w2v_big = Word2Vec.load_word2vec_format('bigdata.bin')
+    return w2v_emp, w2v_big
+
 
 def load_raw_file(fileloc):
     """
-    Loads an empirist raw file
+    Loads an empirist raw file.
 
-    :paramters:
-        - path : string
+    Args:
+        fileloc: string
 
-    :returns:
-        - retlist
-            list of lists
+    Returns:
+        list of lists
     """
     retlist = list()  # the list of lists to return
     tbuffy = list()   # tmp buffer
@@ -28,7 +44,7 @@ def load_raw_file(fileloc):
             # deal with XML meta-data lines:
             if line.startswith('<') and line.strip().endswith('/>'):
                 if len(tbuffy) > 0:
-                    # ...this was not the first XML meta-data line we've coma
+                    # ...this was not the first XML meta-data line we've come
                     # accross:
                     # save the recently seen content and empty the tmp buffer.
                     retlist.append(tbuffy)
@@ -47,24 +63,28 @@ def load_raw_file(fileloc):
 
     return retlist
 
-
-def load_tokd_file(fileloc):
+def load_tagdtokd_file(fileloc, tagged=False):
     """
-    Loads a tokenized empirist file
+    Load a tokenized or tokenized+tagged empirist file.
 
-    :parameters:
-        - path : string
+    Args:
+        fileloc: string
+        tagged: True if file is also tagged
 
-    :return:
-        -retlist
-            list of lists
+    Returns:
+        list of lists
     """
-    def process_tbuffy(tbuffy):
+    def process_tbuffy(tbuffy, tagged=False):
         """
         Process the tmp buffer:
             - be aware of XML meta-data lines
 
+        Args:
+            tbuffy: the temporary buffer (consisting of lines) to process
+            tagged: bool indicating that lines are: tok\tPOS
+
         """
+        # FIXME: Args:tagged is not implemented
         retlist = list()
         if len(tbuffy) > 1:
             emptytail = False
@@ -95,15 +115,64 @@ def load_tokd_file(fileloc):
     with open(fileloc) as fp:
         for line in fp:
             if line.startswith('<') and line.strip().endswith('/>'):
-                retlist += process_tbuffy(tbuffy)
+                retlist += process_tbuffy(tbuffy, tagged)
                 tbuffy = list()
             tbuffy.append(line.strip())
-    retlist += process_tbuffy(tbuffy)
+    retlist += process_tbuffy(tbuffy, tagged)
 
     return retlist
 
+def load_tokenized_file(fileloc):
+    return load_tagdtokd_file(fileloc)
+
+def load_tagged_file(fileloc):
+    return load_tagdtokd_file(fileloc, tagged=True)
+
+def load_tiger_vrt_bz2file(fileloc):
+    """
+    Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
+
+    Args:
+        fileloc: location of the compressed vertical file
+
+    """
+    # utils.load_tiger_vrt_bz2file('../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2')
+    def process_tbuffy(tbuffy):
+        retlist = list()
+        if len(tbuffy) > 0:
+            tmplist = list()
+            for line in tbuffy:
+                tok,lem,pos = line.split('\t')
+                tmplist.append('\t'.join([tok, pos]))
+            retlist.append('\n'.join(tmplist))
+        return retlist
+
+    retlist = list()
+    tbuffy = list()
+    with bz2.open(fileloc, mode='rt') as fp:
+        for line in fp:
+            if line.startswith('<s>'):
+                retlist += process_tbuffy(tbuffy)
+                tbuffy = list()
+            elif line.startswith('</s>'):
+                pass
+            else:
+                tbuffy.append(line.strip())
+    retlist += process_tbuffy(tbuffy)
+    return retlist
 
 def load_tok_trntstd(trainloc, trgloc, names):
+    """
+    Load raw and tokenized empirist files.
+
+    Args:
+        trainloc: location of training files
+        trgloc: location of test files
+        names: list of filenames to join with trainloc and trgloc to load
+
+    Returns:
+        X, y: training, target data
+    """
     X = list()
     y = list()
     for fn in names:
@@ -112,14 +181,13 @@ def load_tok_trntstd(trainloc, trgloc, names):
             if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
                 offset = 1
             X.append([x.strip() for x in ' '.join(tr[offset:]).split('  ')])
-        for tr in load_tokd_file(path.join(trgloc, fn)):
+        for tr in load_tagdtokd_file(path.join(trgloc, fn)):
             offset = 0
             if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
                 offset = 1
             y.append([x for x in tr[offset:] if x != ''])
 
     return X, y
-
 
 def load_all_tok_trntstd():
     """
@@ -175,7 +243,6 @@ def load_all_tok_trntstd():
     y = [snt for txt in y1+y2 for snt in txt]
     return X, y
 
-
 def sliding_window(seq, n=2, return_shorter_seq=True):
     """
     Returns a sliding window (of width n) over data from the iterable
@@ -193,7 +260,6 @@ def sliding_window(seq, n=2, return_shorter_seq=True):
     for elem in it:
         result = result[1:] + (elem,)
         yield result
-
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     """
