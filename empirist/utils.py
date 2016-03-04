@@ -12,6 +12,34 @@ from gensim.models.word2vec import Word2Vec
 # %load_ext autoreload
 # %autoreload 2
 
+cmc_fnames = ["cmc_train_blog_comment.txt", "cmc_train_professional_chat.txt",
+             "cmc_train_social_chat.txt", "cmc_train_twitter_1.txt",
+             "cmc_train_twitter_2.txt", "cmc_train_whats_app.txt",
+             "cmc_train_wiki_discussion_1.txt",
+             "cmc_train_wiki_discussion_2.txt"]
+
+web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
+
+cmc_raw_flocs = [
+    path.join('../data/empirist_training_cmc/raw/', cmc_fname)
+    for cmc_fname in cmc_fnames]
+cmc_tokd_flocs = [
+    path.join('../data/empirist_training_cmc/tokenized/', cmc_fname)
+    for cmc_fname in cmc_fnames]
+cmc_tggd_flocs = [
+    path.join('../data/empirist_training_cmc/tagged/', cmc_fname)
+    for cmc_fname in cmc_fnames]
+
+web_raw_flocs = [
+    path.join('../data/empirist_training_web/raw/', web_name)
+    for web_name in web_names]
+web_tokd_flocs = [
+    path.join('../data/empirist_training_web/tokenized/', web_name)
+    for web_name in web_names]
+web_tggd_flocs = [
+    path.join('../data/empirist_training_web/tagged/', web_name)
+    for web_name in web_names]
+
 def load_w2vs():
     """
     Load the preprocessed word2vec data for the empirist task.
@@ -62,6 +90,11 @@ def load_raw_file(fileloc):
         retlist.append(tbuffy)
 
     return retlist
+
+
+def load_raw_files(filelocs):
+    return [load_raw_file(fileloc) for fileloc in filelocs]
+
 
 def _load_tagdtokd_file(fileloc):
     """
@@ -119,6 +152,7 @@ def _load_tagdtokd_file(fileloc):
 
     return retlist
 
+
 def load_tokenized_file(fileloc):
     """
     Load a tokenized empirist file.
@@ -141,6 +175,36 @@ def load_tokenized_file(fileloc):
         --- 8< ---
     """
     return _load_tagdtokd_file(fileloc)
+
+
+def load_tokenized_files(filelocs):
+    return [load_tokenized_file(fileloc) for fileloc in filelocs]
+
+
+def _process_tagged_elems(elements):
+    tokelems, tagelems = list(), list()
+    for elem in elements:
+        toklines, taglines = list(), list()
+        for line in elem:
+            tokline, tagline = "", ""
+            if line.startswith('<') and line.endswith('/>'):
+                toklines.append(line)
+                taglines.append(line)
+            else:
+                pairs = line.split('\n')
+                if all(['\t' in pair for pair in pairs]):
+                    for tok, tag in [pair.split('\t') for pair in pairs]:
+                        tokline = '\n'.join([tokline, tok]).strip()
+                        tagline = '\n'.join([tagline, tag]).strip()
+                    toklines.append(tokline)
+                    taglines.append(tagline)
+                else:
+                    toklines.append(line)
+                    taglines.append(line)
+        tokelems.append(toklines)
+        tagelems.append(taglines)
+    return tokelems, tagelems
+
 
 def load_tagged_file(fileloc):
     """
@@ -174,31 +238,21 @@ def load_tagged_file(fileloc):
         )
         --- 8< ---
     """
-    elements = _load_tagdtokd_file(fileloc)
-    tokelems, tagelems = list(), list()
-    for elem in elements:
-        toklines, taglines = list(), list()
-        for line in elem:
-            tokline, tagline = "", ""
-            if line.startswith('<') and line.endswith('/>'):
-                toklines.append(line)
-                taglines.append(line)
-            else:
-                pairs = line.split('\n')
-                if all(['\t' in pair for pair in pairs]):
-                    for tok,tag in [pair.split('\t') for pair in pairs]:
-                        tokline = '\n'.join([tokline, tok]).strip()
-                        tagline = '\n'.join([tagline, tag]).strip()
-                    toklines.append(tokline)
-                    taglines.append(tagline)
-                else:
-                    toklines.append(line)
-                    taglines.append(line)
-        tokelems.append(toklines)
-        tagelems.append(taglines)
-    return tokelems, tagelems
+    return _process_tagged_elems(_load_tagdtokd_file(fileloc))
 
-def load_tiger_vrt_bz2file(fileloc):
+
+def load_tagged_files(filelocs):
+    rettoks, rettggs = list(), list()
+    for fileloc in filelocs:
+        toks, tggs = load_tagged_file(fileloc)
+        rettoks.extend(toks)
+        rettggs.extend(tggs)
+
+    return rettoks, rettggs
+
+
+def load_tiger_vrt_bz2file(
+    fileloc='../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2'):
     """
     Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
 
@@ -212,7 +266,7 @@ def load_tiger_vrt_bz2file(fileloc):
         if len(tbuffy) > 0:
             tmplist = list()
             for line in tbuffy:
-                tok,lem,pos = line.split('\t')
+                tok, lem, pos = line.split('\t')
                 tmplist.append('\t'.join([tok, pos]))
             retlist.append('\n'.join(tmplist))
         return retlist
@@ -229,7 +283,8 @@ def load_tiger_vrt_bz2file(fileloc):
             else:
                 tbuffy.append(line.strip())
     retlist += process_tbuffy(tbuffy)
-    return retlist
+    return _process_tagged_elems([retlist])
+
 
 def load_tok_trntstd(trainloc, trgloc, names):
     """
@@ -258,6 +313,7 @@ def load_tok_trntstd(trainloc, trgloc, names):
             y.append([x for x in tr[offset:] if x != ''])
 
     return X, y
+
 
 def load_all_tok_trntstd():
     """
@@ -294,14 +350,6 @@ def load_all_tok_trntstd():
     --- 8< ---
 
     """
-    cmc_names = ["cmc_train_blog_comment.txt",
-                 "cmc_train_professional_chat.txt", "cmc_train_social_chat.txt",
-                 "cmc_train_twitter_1.txt", "cmc_train_twitter_2.txt",
-                 "cmc_train_whats_app.txt", "cmc_train_wiki_discussion_1.txt",
-                 "cmc_train_wiki_discussion_2.txt"]
-
-    web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
-
     X1, y1 = load_tok_trntstd('../data/empirist_training_cmc/raw/',
                               '../data/empirist_training_cmc/tokenized/',
                               cmc_names)
@@ -312,6 +360,7 @@ def load_all_tok_trntstd():
     X = [snt for txt in X1+X2 for snt in txt]
     y = [snt for txt in y1+y2 for snt in txt]
     return X, y
+
 
 def sliding_window(seq, n=2, return_shorter_seq=True):
     """
@@ -330,6 +379,7 @@ def sliding_window(seq, n=2, return_shorter_seq=True):
     for elem in it:
         result = result[1:] + (elem,)
         yield result
+
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
     """
