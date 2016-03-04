@@ -2,17 +2,12 @@ import string
 
 import numpy as np
 
-
-class RepresentationError(Exception):
-    """
-    Exception raised for Errors in the Representation.
-    """
-    pass
+from . import RepresentationError
 
 
 class QOneHotChars(object):
     """
-    FIXME:
+    Quasi-One Hot representation of characters.
 
     Args:
         chars:
@@ -41,8 +36,25 @@ class QOneHotChars(object):
 
     feature_length = len(_feature_string)
 
-    feature_names = (["string."+_str for _str in _string_feature_names] +
+    feature_names = (["string."+_str_feat_name+"-"+_str
+                      for _str_feat_name in _string_feature_names
+                      for _str in getattr(string, _str_feat_name)]
+                     +
                      _other_feature_names)
+
+    def __init__(self, chars=None, matrix=None):
+        self._chars = chars
+        self._matrix = matrix
+
+        if chars is not None and matrix is not None:
+            if matrix != self._encode() and chars != self._decode():
+                raise RepresentationError('chars and matrix do not match.')
+
+        if chars is not None:
+            self._matrix = self._encode()
+
+        if matrix is not None:
+            self._chars = self._decode()
 
     @staticmethod
     def _encode_char(char):
@@ -118,20 +130,6 @@ class QOneHotChars(object):
                     char = char.upper()
             chars = ''.join(chars+char)
         return chars
-
-    def __init__(self, chars=None, matrix=None):
-        self._chars = chars
-        self._matrix = matrix
-
-        if chars is not None and matrix is not None:
-            if matrix != self._encode() and chars != self._decode():
-                raise RepresentationError('chars and matrix do not match.')
-
-        if chars is not None:
-            self._matrix = self._encode()
-
-        if matrix is not None:
-            self._chars = self._decode()
 
     @property
     def chars(self):
