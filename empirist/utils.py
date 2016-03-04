@@ -63,28 +63,25 @@ def load_raw_file(fileloc):
 
     return retlist
 
-def load_tagdtokd_file(fileloc, tagged=False):
+def _load_tagdtokd_file(fileloc):
     """
     Load a tokenized or tokenized+tagged empirist file.
 
     Args:
         fileloc: string
-        tagged: True if file is also tagged
 
     Returns:
         list of lists
     """
-    def process_tbuffy(tbuffy, tagged=False):
+    def process_tbuffy(tbuffy):
         """
         Process the tmp buffer:
             - be aware of XML meta-data lines
 
         Args:
             tbuffy: the temporary buffer (consisting of lines) to process
-            tagged: bool indicating that lines are: tok\tPOS
 
         """
-        # FIXME: Args:tagged is not implemented
         retlist = list()
         if len(tbuffy) > 1:
             emptytail = False
@@ -115,18 +112,91 @@ def load_tagdtokd_file(fileloc, tagged=False):
     with open(fileloc) as fp:
         for line in fp:
             if line.startswith('<') and line.strip().endswith('/>'):
-                retlist += process_tbuffy(tbuffy, tagged)
+                retlist += process_tbuffy(tbuffy)
                 tbuffy = list()
             tbuffy.append(line.strip())
-    retlist += process_tbuffy(tbuffy, tagged)
+    retlist += process_tbuffy(tbuffy)
 
     return retlist
 
 def load_tokenized_file(fileloc):
-    return load_tagdtokd_file(fileloc)
+    """
+    Load a tokenized empirist file.
+
+    Args:
+        fileloc: location of the file to load
+
+    Returns:
+        List of lists of tokenized empirist elements
+
+        --- 8< ---
+        [
+         ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
+          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\nim\nNetz\ngibt\n?',
+          ''],
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
+          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\n…\n;-)',
+          '']
+        ]
+        --- 8< ---
+    """
+    return _load_tagdtokd_file(fileloc)
 
 def load_tagged_file(fileloc):
-    return load_tagdtokd_file(fileloc, tagged=True)
+    """
+    Load a tagged empirist file.
+
+    Args:
+        fileloc: location of the file to load
+
+    Retruns:
+        pair of list of lists of tokenized and tagged elements
+
+        --- 8< ---
+        (
+        [
+         ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
+          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\nim\nNetz\ngibt\n?',
+          ''],
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
+          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\n…\n;-)',
+          '']
+        ]
+        ,
+        [
+         ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
+          'VVFIN\nPPER\n$,\nKOUS\nPPER\nART\nNN\n$(\nURL\n$(\nAPPRART\nNN\nVVFIN\n$.',
+          ''],
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
+          'PTKANT\nAPPR\nPPOSAT\nNN\n$.\nPTKANT\n$,\nART\nNN\nVVFIN\nPPER\n$.\nEMOASC',
+          '']
+        ]
+        )
+        --- 8< ---
+    """
+    elements = _load_tagdtokd_file(fileloc)
+    tokelems, tagelems = list(), list()
+    for elem in elements:
+        toklines, taglines = list(), list()
+        for line in elem:
+            tokline, tagline = "", ""
+            if line.startswith('<') and line.endswith('/>'):
+                toklines.append(line)
+                taglines.append(line)
+            else:
+                pairs = line.split('\n')
+                if all(['\t' in pair for pair in pairs]):
+                    for tok,tag in [pair.split('\t') for pair in pairs]:
+                        tokline = '\n'.join([tokline, tok]).strip()
+                        tagline = '\n'.join([tagline, tag]).strip()
+                    toklines.append(tokline)
+                    taglines.append(tagline)
+                else:
+                    toklines.append(line)
+                    taglines.append(line)
+        tokelems.append(toklines)
+        tagelems.append(taglines)
+    return tokelems, tagelems
 
 def load_tiger_vrt_bz2file(fileloc):
     """
@@ -181,7 +251,7 @@ def load_tok_trntstd(trainloc, trgloc, names):
             if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
                 offset = 1
             X.append([x.strip() for x in ' '.join(tr[offset:]).split('  ')])
-        for tr in load_tagdtokd_file(path.join(trgloc, fn)):
+        for tr in _load_tagdtokd_file(path.join(trgloc, fn)):
             offset = 0
             if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
                 offset = 1
