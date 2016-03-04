@@ -5,51 +5,55 @@ import numpy as np
 import theano
 import theano.tensor as T
 
+from .representation import QOneHotChars as qohchars
+
 def build_n(input_var=None):
     pass
-    #DIMS = 106
-    #SEQ_LENGTH = 25
-    #NUM_UNITS = 100
-    ## Optimization learning rate
-    #LEARNING_RATE = .001
-    ## All gradients above this will be clipped
-    #GRAD_CLIP = 100
+    # DIMS = 106
+    # SEQ_LENGTH = 25
+    # NUM_UNITS = 100
+    # # Optimization learning rate
+    # LEARNING_RATE = .001
+    # # All gradients above this will be clipped
+    # GRAD_CLIP = 100
 
-    #l_in = lasagne.layers.InputLayer(shape=(None, SEQ_LENGTH, DIMS), input_var=input_var)
-    #l_forward = lasagne.layers.LSTMLayer(
-    #    l_in, NUM_UNITS, grad_clipping=GRAD_CLIP,
-    #    nonlinearity=lasagne.nonlinearities.tanh, only_return_final=True)
-    #l_backward = lasagne.layers.LSTMLayer(
-    #    l_in, NUM_UNITS, grad_clipping=GRAD_CLIP,
-    #    nonlinearity=lasagne.nonlinearities.tanh, only_return_final=True, backwards=True)
-    ## concatenate the two
-    #l_concat = lasagne.layers.ConcatLayer([l_forward, l_backward])
+    # l_in = lasagne.layers.InputLayer(shape=(None, SEQ_LENGTH, DIMS), input_var=input_var)
+    # l_forward = lasagne.layers.LSTMLayer(
+    #     l_in, NUM_UNITS, grad_clipping=GRAD_CLIP,
+    #     nonlinearity=lasagne.nonlinearities.tanh, only_return_final=True)
+    # l_backward = lasagne.layers.LSTMLayer(
+    #     l_in, NUM_UNITS, grad_clipping=GRAD_CLIP,
+    #     nonlinearity=lasagne.nonlinearities.tanh, only_return_final=True, backwards=True)
+    # # concatenate the two
+    # l_concat = lasagne.layers.ConcatLayer([l_forward, l_backward])
 
-    ### get only the last output from the sequence
-    ##l_slice = L.layers.SliceLayer(l_concat, -1)
+    # ## get only the last output from the sequence
+    # #l_slice = L.layers.SliceLayer(l_concat, -1)
 
-    ## output layer is a simple dense connection, with DIMS output unit
-    #l_out = lasagne.layers.DenseLayer(l_concat, num_units=DIMS, nonlinearity=lasagne.nonlinearities.sigmoid)
-    #return l_out
+    # # output layer is a simple dense connection, with DIMS output unit
+    # l_out = lasagne.layers.DenseLayer(l_concat, num_units=DIMS, nonlinearity=lasagne.nonlinearities.sigmoid)
+    # return l_out
+
 
 def build_nn():
-    from keras.models import Graph, Sequential
+    from keras.models import Graph
 
-    from keras.layers import Convolution1D, Embedding, MaxPooling1D
-    from keras.layers.core import TimeDistributedDense, Dropout, Activation
+    from keras.layers import Embedding, Convolution1D, MaxPooling1D
+    from keras.layers.core import Activation, Dropout, TimeDistributedDense
     from keras.layers.recurrent import LSTM
 
-    activation = 'sigmoid'
-    output_dim = 256
-    pos_output_dim = 50
-
-    words_maxlen = 8
-
-    char_dims = 106
-    embedding_size = 64
+    w2v_dims = 500
+    words_maxlen = 7
     chars_maxlen = 8
-    vocab_size = char_dims
+    char_dims = qohchars.feature_length
 
+    embedding_size = 64
+
+    pos_output_dim = 50
+    output_dim = 256
+
+    activation = 'sigmoid'
+    vocab_size = char_dims
     lstm_output_dim = output_dim
     lstm_activation = activation
     lstm_inner_activation = 'hard_sigmoid'
@@ -67,38 +71,37 @@ def build_nn():
     #  - two for word2vec representations of the empirist and the wikipedia data
     gmodel.add_input(
         name='chars',
-        input_shape=(chars_maxlen,))
+        batch_input_shape=(chars_maxlen, char_dims))
     gmodel.add_input(
         name='w2v_emp',
-        input_shape=(words_maxlen,w2v_emp.layer1_size,))
+        input_shape=(words_maxlen, w2v_dims))
     gmodel.add_input(
         name='w2v_big',
-        input_shape=(words_maxlen,w2v_big.layer1_size,))
-
+        input_shape=(words_maxlen, w2v_dims))
 
     ### CHARS path
     #
     gmodel.add_node(Embedding(input_dim=char_dims, output_dim=embedding_size,
-                            input_length=words_maxlen, mask_zero=True),
+                              input_length=words_maxlen, mask_zero=True),
                     input='chars', name='chars_embedding')
-    #gmodel.add_node(Dropout(0.25),
-    #               input='chars_embedding', name='chars_dropout')
-    #gmodel.add_node(Convolution1D(input_dim=embedding_size,
-    #                              nb_filter=nb_filter,
-    #                              filter_length=filter_length,
-    #                              border_mode='valid',
-    #                              activation='relu',
-    #                              subsample_length=pool_length),
-    #               input='chars_dropout', name='chars_conv1d')
-    #gmodel.add_node(MaxPooling1D(pool_length=pool_length),
-    #               input='chars_conv1d', name='chars_maxpool')
+    # gmodel.add_node(Dropout(0.25),
+    #                input='chars_embedding', name='chars_dropout')
+    # gmodel.add_node(Convolution1D(input_dim=embedding_size,
+    #                               nb_filter=nb_filter,
+    #                               filter_length=filter_length,
+    #                               border_mode='valid',
+    #                               activation='relu',
+    #                               subsample_length=pool_length),
+    #                input='chars_dropout', name='chars_conv1d')
+    # gmodel.add_node(MaxPooling1D(pool_length=pool_length),
+    #                input='chars_conv1d', name='chars_maxpool')
 
-    #gmodel.add_node(Flatten(),
-    #               input='chars_tdd', name='chars_flat')
+    # gmodel.add_node(Flatten(),
+    #                input='chars_tdd', name='chars_flat')
     gmodel.add_node(LSTM(lstm_output_dim, return_sequences=True),
-                input='chars_embedding', name='chars_lstm')
+                    input='chars_embedding', name='chars_lstm')
     gmodel.add_node(Dropout(0.25),
-                input='chars_lstm', name='chars_dropout')
+                    input='chars_lstm', name='chars_dropout')
     #
     ### CHARS path - end
 
@@ -123,7 +126,7 @@ def build_nn():
     gmodel.add_node(
         LSTM(lstm_output_dim, return_sequences=True),
         inputs=['w2v_emp', 'w2v_big', 'chars_dropout'],
-        mergemode='concat',
+        merge_mode='concat',
         name='gmodel_lstm')
 
     gmodel.add_node(
@@ -143,9 +146,7 @@ def build_nn():
         name='output',
         input='gmodel_tdd')
 
-    gmodel.compile(
-        optimizer='adam',
-        loss={'output':'categorical_crossentropy'})
+    gmodel.compile( optimizer='adam', loss={'output': 'categorical_crossentropy'})
 
     return gmodel
 
