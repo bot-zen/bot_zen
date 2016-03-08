@@ -1,3 +1,5 @@
+# -*- coding: UTF-8 -*-
+
 import bz2
 import re
 
@@ -12,52 +14,42 @@ from gensim.models.word2vec import Word2Vec
 # %load_ext autoreload
 # %autoreload 2
 
-cmc_fnames = ["cmc_train_blog_comment.txt", "cmc_train_professional_chat.txt",
-             "cmc_train_social_chat.txt", "cmc_train_twitter_1.txt",
-             "cmc_train_twitter_2.txt", "cmc_train_whats_app.txt",
-             "cmc_train_wiki_discussion_1.txt",
-             "cmc_train_wiki_discussion_2.txt"]
+_cmc_fnames = ["cmc_train_blog_comment.txt", "cmc_train_professional_chat.txt",
+               "cmc_train_social_chat.txt", "cmc_train_twitter_1.txt",
+               "cmc_train_twitter_2.txt", "cmc_train_whats_app.txt",
+               "cmc_train_wiki_discussion_1.txt",
+               "cmc_train_wiki_discussion_2.txt"]
 
-web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
+_web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
 
 cmc_raw_flocs = [
     path.join('../data/empirist_training_cmc/raw/', cmc_fname)
-    for cmc_fname in cmc_fnames]
+    for cmc_fname in _cmc_fnames]
 cmc_tokd_flocs = [
     path.join('../data/empirist_training_cmc/tokenized/', cmc_fname)
-    for cmc_fname in cmc_fnames]
+    for cmc_fname in _cmc_fnames]
 cmc_tggd_flocs = [
     path.join('../data/empirist_training_cmc/tagged/', cmc_fname)
-    for cmc_fname in cmc_fnames]
+    for cmc_fname in _cmc_fnames]
 
 web_raw_flocs = [
     path.join('../data/empirist_training_web/raw/', web_name)
-    for web_name in web_names]
+    for web_name in _web_names]
 web_tokd_flocs = [
     path.join('../data/empirist_training_web/tokenized/', web_name)
-    for web_name in web_names]
+    for web_name in _web_names]
 web_tggd_flocs = [
     path.join('../data/empirist_training_web/tagged/', web_name)
-    for web_name in web_names]
+    for web_name in _web_names]
 
-def load_w2vs():
-    """
-    Load the preprocessed word2vec data for the empirist task.
-
-    Returns:
-        w2v_emp, w2v_big
-
-        w2v_emp: trained on the empirist trainig data
-        w2v_big: trained on big wikipedia data
-    """
-    w2v_emp = Word2Vec.load_word2vec_format('empirist.bin')
-    w2v_big = Word2Vec.load_word2vec_format('bigdata.bin')
-    return w2v_emp, w2v_big
+all_raw_flocs = cmc_raw_flocs + web_raw_flocs
+all_tokd_flocs = cmc_tokd_flocs + web_tokd_flocs
+all_tggd_flocs = cmc_tggd_flocs + web_tggd_flocs
 
 
 def load_raw_file(fileloc):
     """
-    Loads an empirist raw file.
+    Loads a raw empirist file.
 
     Args:
         fileloc: string
@@ -88,12 +80,14 @@ def load_raw_file(fileloc):
     if len(tbuffy) > 0:
         # don't forget to empty the tmp buffer
         retlist.append(tbuffy)
-
     return retlist
 
 
 def load_raw_files(filelocs):
-    return [load_raw_file(fileloc) for fileloc in filelocs]
+    """
+    Load multiple raw empirist files.
+    """
+    return sum([load_raw_file(fileloc) for fileloc in filelocs], [])
 
 
 def _load_tagdtokd_file(fileloc):
@@ -166,10 +160,13 @@ def load_tokenized_file(fileloc):
         --- 8< ---
         [
          ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
-          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\nim\nNetz\ngibt\n?',
+          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\
+              \nim\nNetz\ngibt\n?',
           ''],
-         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
-          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\n…\n;-)',
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um \
+             15:24" />',
+          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\
+              \n…\n;-)',
           '']
         ]
         --- 8< ---
@@ -178,10 +175,16 @@ def load_tokenized_file(fileloc):
 
 
 def load_tokenized_files(filelocs):
-    return [load_tokenized_file(fileloc) for fileloc in filelocs]
+    """
+    Load multiple tokenized empirist files.
+    """
+    return sum([load_tokenized_file(fileloc) for fileloc in filelocs], [])
 
 
 def _process_tagged_elems(elements):
+    """
+    FIXME:
+    """
     tokelems, tagelems = list(), list()
     for elem in elements:
         toklines, taglines = list(), list()
@@ -220,19 +223,25 @@ def load_tagged_file(fileloc):
         (
         [
          ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
-          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\nim\nNetz\ngibt\n?',
+          'Wusstet\nIhr\n,\ndass\nes\neine\nSeite\n“\nFettehenne.info\n”\
+              \nim\nNetz\ngibt\n?',
           ''],
-         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
-          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\n…\n;-)',
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um \
+             15:24" />',
+          'Danke\nfür\ndeinen\nKommentar\n!\nJa\n,\ndie\nSeite\nkenne\nich\
+              \n…\n;-)',
           '']
         ]
         ,
         [
          ['<posting author="B. Tovar" date="23. Januar 2013 um 15:21" />',
-          'VVFIN\nPPER\n$,\nKOUS\nPPER\nART\nNN\n$(\nURL\n$(\nAPPRART\nNN\nVVFIN\n$.',
+          'VVFIN\nPPER\n$,\nKOUS\nPPER\nART\nNN\n$(\nURL\n$(\nAPPRART\nNN\n\
+              VVFIN\n$.',
           ''],
-         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um 15:24" />',
-          'PTKANT\nAPPR\nPPOSAT\nNN\n$.\nPTKANT\n$,\nART\nNN\nVVFIN\nPPER\n$.\nEMOASC',
+         ['<posting author="Carl Frederick Luthin" date="23. Januar 2013 um \
+             15:24" />',
+          'PTKANT\nAPPR\nPPOSAT\nNN\n$.\nPTKANT\n$,\nART\nNN\nVVFIN\nPPER\n\
+              $.\nEMOASC',
           '']
         ]
         )
@@ -242,17 +251,79 @@ def load_tagged_file(fileloc):
 
 
 def load_tagged_files(filelocs):
+    """
+    Load multiple tagged empirist files.
+    """
     rettoks, rettggs = list(), list()
     for fileloc in filelocs:
         toks, tggs = load_tagged_file(fileloc)
         rettoks.extend(toks)
         rettggs.extend(tggs)
-
     return rettoks, rettggs
 
 
-def load_tiger_vrt_bz2file(
-    fileloc='../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2'):
+def filter_elems(elems):
+    # r=utils.load_raw_files(utils.web_raw_flocs)
+    # t=utils.load_tokenized_files(utils.web_tokd_flocs)
+    # x,y= utils.load_tagged_files(utils.web_tggd_flocs)
+    retlist = list()
+    for elem in elems:
+        offset = 0
+        if elem[0].startswith('<') and elem[0].strip().endswith('/>'):
+            offset = 1
+        retlist.append([line for line in elem[offset:] if line])
+    return retlist
+
+
+# def load_all_tok_trntstd():
+#     """
+#     Load Training and Testing Data from the empirist data.
+#
+#
+#     What we want is something like:
+#     --- 8< ---
+#     In : X1[0]
+#     Out: ['…das hört sich ja nach einem spannend-amüsanten Ausflug an….super!']
+#
+#     In : y1[0]
+#     Out: ['…\ndas\nhört\nsich\nja\nnach\neinem\n\\
+#           spannend-amüsanten\nAusflug\nan\n…\n.\nsuper\n!']
+#
+#     In : X2[0]
+#     Out:
+#     ['6 Tipps zum Fotografieren',
+#      'In diesem Video seht Ihr 6 Tipps, die beim Fotografieren helfen könnten.',
+#      'Und das sind die Tipps aus dem Video:',...
+#
+#     In : y2[0]
+#     Out:
+#     ['6\nTipps\nzum\nFotografieren',
+#      'In\ndiesem\nVideo\nseht\nIhr\n6\nTipps\n,\ndie\nbeim\nFotografieren\nhelfen\nkönnten\n.',
+#      'Und\ndas\nsind\ndie\nTipps\naus\ndem\nVideo\n:',...
+#
+#     # and the following special case:
+#     In : X1[174]
+#     Out: ['tag quaki : )']
+#
+#     In : y1[174]
+#     Out: ['tag\nquaki\n:)']
+#     --- 8< ---
+#
+#     """
+#     X1, y1 = load_tok_trntstd('../data/empirist_training_cmc/raw/',
+#                               '../data/empirist_training_cmc/tokenized/',
+#                               cmc_names)
+#     X2, y2 = load_tok_trntstd('../data/empirist_training_web/raw/',
+#                               '../data/empirist_training_web/tokenized/',
+#                               web_names)
+#
+#     X = [snt for txt in X1+X2 for snt in txt]
+#     y = [snt for txt in y1+y2 for snt in txt]
+#     return X, y
+
+
+def load_tiger_vrt_file(
+        fileloc='../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2'):
     """
     Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
 
@@ -260,7 +331,7 @@ def load_tiger_vrt_bz2file(
         fileloc: location of the compressed vertical file
 
     """
-    # utils.load_tiger_vrt_bz2file('../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2')
+    # utils.load_tiger_vrt_file('../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2')
     def process_tbuffy(tbuffy):
         retlist = list()
         if len(tbuffy) > 0:
@@ -286,80 +357,19 @@ def load_tiger_vrt_bz2file(
     return _process_tagged_elems([retlist])
 
 
-def load_tok_trntstd(trainloc, trgloc, names):
+def load_w2vs():
     """
-    Load raw and tokenized empirist files.
-
-    Args:
-        trainloc: location of training files
-        trgloc: location of test files
-        names: list of filenames to join with trainloc and trgloc to load
+    Load the preprocessed word2vec data for the empirist task.
 
     Returns:
-        X, y: training, target data
+        w2v_emp, w2v_big
+
+        w2v_emp: trained on the empirist trainig data
+        w2v_big: trained on big wikipedia data
     """
-    X = list()
-    y = list()
-    for fn in names:
-        for tr in load_raw_file(path.join(trainloc, fn)):
-            offset = 0
-            if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
-                offset = 1
-            X.append([x.strip() for x in ' '.join(tr[offset:]).split('  ')])
-        for tr in _load_tagdtokd_file(path.join(trgloc, fn)):
-            offset = 0
-            if tr[0].startswith('<') and tr[0].strip().endswith('/>'):
-                offset = 1
-            y.append([x for x in tr[offset:] if x != ''])
-
-    return X, y
-
-
-def load_all_tok_trntstd():
-    """
-    Load Training and Testing Data from the empirist data.
-
-
-    What we want is something like:
-    --- 8< ---
-    In : X1[0]
-    Out: ['…das hört sich ja nach einem spannend-amüsanten Ausflug an….super!']
-
-    In : y1[0]
-    Out: ['…\ndas\nhört\nsich\nja\nnach\neinem\n\\
-          spannend-amüsanten\nAusflug\nan\n…\n.\nsuper\n!']
-
-    In : X2[0]
-    Out:
-    ['6 Tipps zum Fotografieren',
-     'In diesem Video seht Ihr 6 Tipps, die beim Fotografieren helfen könnten.',
-     'Und das sind die Tipps aus dem Video:',...
-
-    In : y2[0]
-    Out:
-    ['6\nTipps\nzum\nFotografieren',
-     'In\ndiesem\nVideo\nseht\nIhr\n6\nTipps\n,\ndie\nbeim\nFotografieren\nhelfen\nkönnten\n.',
-     'Und\ndas\nsind\ndie\nTipps\naus\ndem\nVideo\n:',...
-
-    # and the following special case:
-    In : X1[174]
-    Out: ['tag quaki : )']
-
-    In : y1[174]
-    Out: ['tag\nquaki\n:)']
-    --- 8< ---
-
-    """
-    X1, y1 = load_tok_trntstd('../data/empirist_training_cmc/raw/',
-                              '../data/empirist_training_cmc/tokenized/',
-                              cmc_names)
-    X2, y2 = load_tok_trntstd('../data/empirist_training_web/raw/',
-                              '../data/empirist_training_web/tokenized/',
-                              web_names)
-
-    X = [snt for txt in X1+X2 for snt in txt]
-    y = [snt for txt in y1+y2 for snt in txt]
-    return X, y
+    w2v_emp = Word2Vec.load_word2vec_format('empirist.bin')
+    w2v_big = Word2Vec.load_word2vec_format('bigdata.bin')
+    return w2v_emp, w2v_big
 
 
 def sliding_window(seq, n=2, return_shorter_seq=True):
