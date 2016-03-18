@@ -8,15 +8,18 @@ from os import path
 
 import numpy as np
 
-from gensim.models.word2vec import Word2Vec
+from .representation import postags as _postags
+from .representation import qonehotchars as _qonehotchars
+from .slow_utils import _get_w2v_bigdata, _get_w2v_empirist
 
-# when using ipython
-# %load_ext autoreload
-# %autoreload 2
+np.random.seed(0)  # For reproducability
 
-_cmc_fnames = ["cmc_train_blog_comment.txt", "cmc_train_professional_chat.txt",
-               "cmc_train_social_chat.txt", "cmc_train_twitter_1.txt",
-               "cmc_train_twitter_2.txt", "cmc_train_whats_app.txt",
+_cmc_fnames = ["cmc_train_blog_comment.txt",
+               "cmc_train_professional_chat.txt",
+               "cmc_train_social_chat.txt",
+               "cmc_train_twitter_1.txt",
+               "cmc_train_twitter_2.txt",
+               "cmc_train_whats_app.txt",
                "cmc_train_wiki_discussion_1.txt",
                "cmc_train_wiki_discussion_2.txt"]
 
@@ -46,6 +49,57 @@ all_raw_flocs = cmc_raw_flocs + web_raw_flocs
 all_tokd_flocs = cmc_tokd_flocs + web_tokd_flocs
 all_tggd_flocs = cmc_tggd_flocs + web_tggd_flocs
 
+_cmc_trial_fnames = ["professional_chat.txt",
+                     "social_chat.txt",
+                     "tweets.txt",
+                     "wikipedia_talk_pages.txt"]
+
+_web_trial_fnames = ["trial006_hobby.txt",
+                     "trial007_reisen.txt",
+                     "trial008_lifestyle.txt",
+                     "trial009_beruf.txt",
+                     "trial010_sonstige.txt"]
+
+cmc_trial_raw_flocs = [
+    path.join('../data/empirist_trial_cmc/raw/', cmc_fname)
+    for cmc_fname in _cmc_trial_fnames]
+cmc_trial_tokd_flocs = [
+    path.join('../data/empirist_trial_cmc/tokenized/', cmc_fname)
+    for cmc_fname in _cmc_trial_fnames]
+cmc_trial_tggd_flocs = [
+    path.join('../data/empirist_trial_cmc/tagged/', cmc_fname)
+    for cmc_fname in _cmc_trial_fnames]
+
+web_trial_raw_flocs = [
+    path.join('../data/empirist_trial_web/raw/', web_name)
+    for web_name in _web_trial_fnames]
+web_trial_tokd_flocs = [
+    path.join('../data/empirist_trial_web/tokenized/', web_name)
+    for web_name in _web_trial_fnames]
+web_trial_tggd_flocs = [
+    path.join('../data/empirist_trial_web/tagged/', web_name)
+    for web_name in _web_trial_fnames]
+
+all_trial_raw_flocs = cmc_trial_raw_flocs + web_trial_raw_flocs
+all_trial_tokd_flocs = cmc_trial_tokd_flocs + web_trial_tokd_flocs
+all_trial_tggd_flocs = cmc_trial_tggd_flocs + web_trial_tggd_flocs
+
+_cmc_tst_fnames = ["cmc_test_blog_comment.txt",
+                   "cmc_test_professional_chat.txt",
+                   "cmc_test_social_chat.txt",
+                   "cmc_test_twitter.txt",
+                   "cmc_test_whatsapp.txt",
+                   "cmc_test_wiki_discussion.txt"]
+_web_tst_names = ["web_test_%03d.txt" % (i) for i in range(1, 13)]
+
+cmc_tst_tokd_flocs = [
+    path.join('../data/empirist_test_pos_cmc/tokenized/', cmc_fname)
+    for cmc_fname in _cmc_tst_fnames]
+web_tst_tokd_flocs = [
+    path.join('../data/empirist_test_pos_web/tokenized/', web_name)
+    for web_name in _web_tst_names]
+
+all_tst_tokd_flocs = cmc_tst_tokd_flocs + web_tst_tokd_flocs
 
 def load_raw_file(fileloc):
     """
@@ -262,68 +316,25 @@ def load_tagged_files(filelocs):
     return rettoks, rettggs
 
 
+def filter_elem(elem):
+    offset = 0
+    if elem[0].startswith('<') and elem[0].strip().endswith('/>'):
+        offset = 1
+    return [line for line in elem[offset:] if line]
+
+
 def filter_elems(elems):
     # r=utils.load_raw_files(utils.web_raw_flocs)
     # t=utils.load_tokenized_files(utils.web_tokd_flocs)
     # x,y= utils.load_tagged_files(utils.web_tggd_flocs)
     retlist = list()
     for elem in elems:
-        offset = 0
-        if elem[0].startswith('<') and elem[0].strip().endswith('/>'):
-            offset = 1
-        retlist.append([line for line in elem[offset:] if line])
+        retlist.append(filter_elem(elem))
     return retlist
 
 
-# def load_all_tok_trntstd():
-#     """
-#     Load Training and Testing Data from the empirist data.
-#
-#
-#     What we want is something like:
-#     --- 8< ---
-#     In : X1[0]
-#     Out: ['…das hört sich ja nach einem spannend-amüsanten Ausflug an….super!']
-#
-#     In : y1[0]
-#     Out: ['…\ndas\nhört\nsich\nja\nnach\neinem\n\\
-#           spannend-amüsanten\nAusflug\nan\n…\n.\nsuper\n!']
-#
-#     In : X2[0]
-#     Out:
-#     ['6 Tipps zum Fotografieren',
-#      'In diesem Video seht Ihr 6 Tipps, die beim Fotografieren helfen könnten.',
-#      'Und das sind die Tipps aus dem Video:',...
-#
-#     In : y2[0]
-#     Out:
-#     ['6\nTipps\nzum\nFotografieren',
-#      'In\ndiesem\nVideo\nseht\nIhr\n6\nTipps\n,\ndie\nbeim\nFotografieren\nhelfen\nkönnten\n.',
-#      'Und\ndas\nsind\ndie\nTipps\naus\ndem\nVideo\n:',...
-#
-#     # and the following special case:
-#     In : X1[174]
-#     Out: ['tag quaki : )']
-#
-#     In : y1[174]
-#     Out: ['tag\nquaki\n:)']
-#     --- 8< ---
-#
-#     """
-#     X1, y1 = load_tok_trntstd('../data/empirist_training_cmc/raw/',
-#                               '../data/empirist_training_cmc/tokenized/',
-#                               cmc_names)
-#     X2, y2 = load_tok_trntstd('../data/empirist_training_web/raw/',
-#                               '../data/empirist_training_web/tokenized/',
-#                               web_names)
-#
-#     X = [snt for txt in X1+X2 for snt in txt]
-#     y = [snt for txt in y1+y2 for snt in txt]
-#     return X, y
-
-
 def load_tiger_vrt_file(
-        fileloc='../data/tiger/tiger_release_aug07.corrected.16012013.vrt.bz2'):
+        fileloc='../data/tiger/tiger_release_aug07.corrected.16012013-empirist.vrt.bz2'):
     """
     Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
 
@@ -357,19 +368,249 @@ def load_tiger_vrt_file(
     return _process_tagged_elems([retlist])
 
 
-def load_w2vs():
+def _sanitize_tok(tok):
+    if tok == '“': tok = '"'
+    elif tok == '”': tok = '"'
+    return tok
+
+
+def _encode_tok(tok, suffix_length=5):
+    toklen = len(tok)
+    stoken = ''.join([" " * (suffix_length - toklen), tok[0:suffix_length],
+                      tok[-suffix_length:], " " * (suffix_length - toklen)])
+    return _qonehotchars.encode(stoken).reshape(800,)
+
+
+def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
+                          padding=False, shuffle=False, postagstype=None):
     """
-    Load the preprocessed word2vec data for the empirist task.
+    Load Training and Testing Data from the empirist data.
+
+    What we want is something like:
+    --- 8< ---
+    In : X1[0]
+    Out: ['…das hört sich ja nach einem spannend-amüsanten Ausflug an….super!']
+
+    In : y1[0]
+    Out: ['…\ndas\nhört\nsich\nja\nnach\neinem\n\\
+          spannend-amüsanten\nAusflug\nan\n…\n.\nsuper\n!']
+
+    In : X2[0]
+    Out:
+    ['6 Tipps zum Fotografieren',
+     'In diesem Video seht Ihr 6 Tipps, die beim Fotografieren helfen könnten.',
+     'Und das sind die Tipps aus dem Video:',...
+
+    In : y2[0]
+    Out:
+    ['6\nTipps\nzum\nFotografieren',
+     'In\ndiesem\nVideo\nseht\nIhr\n6\nTipps\n,\ndie\nbeim\nFotografieren\nhelfen\nkönnten\n.',
+     'Und\ndas\nsind\ndie\nTipps\naus\ndem\nVideo\n:',...
+
+    # and the following special case:
+    In : X1[174]
+    Out: ['tag quaki : )']
+
+    In : y1[174]
+    Out: ['tag\nquaki\n:)']
+    --- 8< ---
+
+    Args:
+       toks, tags = load_tagged_files(flocs)
 
     Returns:
-        w2v_emp, w2v_big
-
-        w2v_emp: trained on the empirist trainig data
-        w2v_big: trained on big wikipedia data
+        x, y, xorg, yorg:
     """
-    w2v_emp = Word2Vec.load_word2vec_format('empirist.bin')
-    w2v_big = Word2Vec.load_word2vec_format('bigdata.bin')
-    return w2v_emp, w2v_big
+    all_tggd = (filter_elems(toks), filter_elems(tags))
+    tok_elems = all_tggd[0]
+    tag_elems = all_tggd[1]
+
+    if sample_size > 0:
+        tok_elems = tok_elems[0:sample_size]
+        tag_elems = tag_elems[0:sample_size]
+
+    w2v_empirist = _get_w2v_empirist()
+    w2v_bigdata = _get_w2v_bigdata()
+    x, y, xorg, yorg = [], [], [], []
+
+    for eid, elem in enumerate(tok_elems):
+        tokelem = elem
+        tagelem = tag_elems[eid]
+
+        for tokline in tokelem:
+            toksline = []
+            tokens = [tok.lower() for tok in tokline.split('\n')]
+            if seqlen is not None and len(tokens) != seqlen:
+                continue
+
+            for tok in [_sanitize_tok(tok) for tok in tokens]:
+                tok_encd = _encode_tok(tok)
+                if tok in w2v_empirist:
+                    x_emp = w2v_empirist[tok]
+                else:
+                    x_emp = w2v_empirist.seeded_vector(tok)
+                if tok in w2v_bigdata:
+                    x_big = w2v_bigdata[tok]
+                else:
+                    x_big = w2v_bigdata.seeded_vector(tok)
+                toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
+                dummy_emp = np.zeros(
+                    w2v_empirist.seeded_vector(_postags.padding_tag).shape)
+                dummy_big = np.zeros(
+                    w2v_bigdata.seeded_vector(_postags.padding_tag).shape)
+                dummy = np.concatenate((dummy_emp, dummy_big,
+                                        np.zeros(tok_encd.shape)))
+            if padding:
+                dummies = [dummy for did in range(seqlen-len(tokens))]
+                toksline.extend(dummies)
+            x.append(toksline)
+            xorg.append(tokline)
+
+        for line in tagelem:
+            postags = line.split('\n')
+            if seqlen is not None and len(postags) != seqlen:
+                continue
+
+            if padding:
+                postags_enc = _postags.encode(postags + [_postags.padding_tag] *
+                                              (seqlen-len(postags)),
+                                              postagstype=postagstype)
+            else:
+                postags_enc = _postags.encode(postags, postagstype=postagstype)
+            y.append(postags_enc)
+            yorg.append(line)
+
+    return x, y, xorg, yorg
+
+
+def get_test_data_tagging(flocs=all_tst_tokd_flocs):
+    toks, tags = load_tagged_files(flocs)
+    all_tggd = (filter_elems(toks), filter_elems(tags))
+    tok_elems = all_tggd[0]
+    w2v_empirist = _get_w2v_empirist()
+    w2v_bigdata = _get_w2v_bigdata()
+    x, xorg = [], []
+
+    for eid, elem in enumerate(tok_elems):
+        tokelem = elem
+
+        for tokline in tokelem:
+            toksline = []
+            tokens = [tok.lower() for tok in tokline.split('\n')]
+
+            for tok in [_sanitize_tok(tok) for tok in tokens]:
+                tok_encd = _encode_tok(tok)
+                if tok in w2v_empirist:
+                    x_emp = w2v_empirist[tok]
+                else:
+                    x_emp = w2v_empirist.seeded_vector(tok)
+                if tok in w2v_bigdata:
+                    x_big = w2v_bigdata[tok]
+                else:
+                    x_big = w2v_bigdata.seeded_vector(tok)
+                toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
+            x.append(toksline)
+            xorg.append(tokline)
+
+    return x, xorg
+
+
+def process_test_data_tagging(model, extension=".done", postagstype=None):
+    for floc in all_tst_tokd_flocs:
+        elems, elems_org = get_test_data_tagging(flocs=[floc])
+        prcd_floc = floc + extension
+        with open(prcd_floc, 'w') as prcdh:
+            for elemid, elem in enumerate(elems):
+                preds = model.predict_classes(np.array([elem]), batch_size=1,
+                                              verbose=0)[0]
+                tags = _postags.decode_oh(preds, postagstype)
+                lines = [''] + ['\t'.join(x) for x in
+                                zip(elems_org[elemid].split('\n'), tags)]
+                prcdh.writelines('\n'.join(lines)+'\n')
+                if 'cmc/' in floc:
+                    prcdh.write('\n')
+
+    # for file in empirist_test_pos_{cmc,web}/tokenized/*.done; do paste
+    # $(dirname $file)/$(basename $file .done) <(cut -f2 $file); done | less
+
+
+def run_experiments():
+    # from empirist import slow_utils
+    # from empirist import utils
+    from empirist import network
+    # import numpy as np
+    from empirist.representation import postags
+
+    retres = []
+
+    postagstype_ibk = postags.PosTagsType(feature_type="ibk")
+    postagstype_ibk_used = postags.PosTagsType(feature_type="ibk_used")
+    postagstype_tiger_used = postags.PosTagsType(feature_type="1999_used")
+
+    toks, tags = load_tagged_files(all_tggd_flocs)
+    toks_trial, tags_trial = load_tagged_files(all_trial_tggd_flocs)
+    toks_tig, tags_tig = load_tiger_vrt_file()
+    dropout = 0.1
+    batch_size = 10
+    nb_epoch = 20
+
+    ###
+    # QUICK TESTING
+    # toks = toks[0:100]
+    # tags = tags[0:100]
+
+    # dropout = 0.1
+    # batch_size = 2
+    # nb_epoch = 2
+    ###
+
+    model = network.build_nn(output_dim=postagstype_ibk_used.feature_length,
+                             lstm_output_dim=1024, dropout=dropout)
+    model.save_weights('/tmp/emp_plain.hdf5', overwrite=True)
+    network.train_nn(model, toks, tags, batch_size=batch_size,
+                     nb_epoch=nb_epoch, postagstype=postagstype_ibk_used)
+    model.save_weights('/tmp/emp_trained.hdf5', overwrite=True)
+    res_emp = network.eval_nn(model, toks_trial, tags_trial,
+                              postagstype=postagstype_ibk_used)
+    network.compact_res(res_emp)
+    process_test_data_tagging(model, extension=".emp")
+    retres.append(('emp', res_emp))
+
+    batch_size = 50
+    model = network.build_nn(output_dim=postagstype_tiger_used.feature_length,
+                             lstm_output_dim=1024, dropout=dropout)
+    model.save_weights('/tmp/tig_plain.hdf5', overwrite=True)
+    network.train_nn(model, toks_tig, tags_tig, batch_size=batch_size,
+                     nb_epoch=nb_epoch, postagstype=postagstype_tiger_used)
+    model.save_weights('/tmp/tig_trained.hdf5', overwrite=True)
+    res_tig = network.eval_nn(model, toks_trial, tags_trial,
+                              postagstype=postagstype_tiger_used)
+    network.compact_res(res_tig)
+    process_test_data_tagging(model, extension=".tig")
+    retres.append(('tig', res_tig))
+
+    batch_size = 20
+    model = network.build_nn(output_dim=postagstype_ibk.feature_length,
+                             lstm_output_dim=1024, dropout=dropout)
+    model.save_weights('/tmp/emptig_plain.hdf5', overwrite=True)
+
+    network.train_nn(model, toks, tags, batch_size=batch_size,
+                     nb_epoch=nb_epoch, postagstype=postagstype_ibk)
+    model.save_weights('/tmp/emptig_trained-0.hdf5', overwrite=True)
+    res_emp2 = network.eval_nn(model, toks_trial, tags_trial,
+                               postagstype=postagstype_ibk)
+    network.compact_res(res_emp2)
+    batch_size = 50
+    network.train_nn(model, toks_tig, tags_tig, batch_size=batch_size,
+                     nb_epoch=nb_epoch, postagstype=postagstype_ibk)
+    model.save_weights('/tmp/emptig_trained-1.hdf5', overwrite=True)
+    res_emptig = network.eval_nn(model, toks_trial, tags_trial,
+                                 postagstype=postagstype_ibk)
+    network.compact_res(res_emptig)
+    process_test_data_tagging(model, extension=".emptig")
+    retres.append(('emptig', res_emptig))
+
+    return retres
 
 
 def sliding_window(seq, n=2, return_shorter_seq=True):
