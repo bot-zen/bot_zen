@@ -573,7 +573,8 @@ def run_experiments():
     res_emp = network.eval_nn(model, toks_trial, tags_trial,
                               postagstype=postagstype_ibk_used)
     network.compact_res(res_emp)
-    process_test_data_tagging(model, extension=".emp")
+    process_test_data_tagging(model, extension=".emp",
+                              postagstype=postagstype_ibk_used)
     retres.append(('emp', res_emp))
 
     batch_size = 50
@@ -586,7 +587,8 @@ def run_experiments():
     res_tig = network.eval_nn(model, toks_trial, tags_trial,
                               postagstype=postagstype_tiger_used)
     network.compact_res(res_tig)
-    process_test_data_tagging(model, extension=".tig")
+    process_test_data_tagging(model, extension=".tig",
+                              postagstype=postagstype_tiger_used)
     retres.append(('tig', res_tig))
 
     batch_size = 20
@@ -607,7 +609,8 @@ def run_experiments():
     res_emptig = network.eval_nn(model, toks_trial, tags_trial,
                                  postagstype=postagstype_ibk)
     network.compact_res(res_emptig)
-    process_test_data_tagging(model, extension=".emptig")
+    process_test_data_tagging(model, extension=".emptig",
+                              postagstype=postagstype_ibk)
     retres.append(('emptig', res_emptig))
 
     return retres
