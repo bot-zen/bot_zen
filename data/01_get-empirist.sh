@@ -4,15 +4,7 @@
 # * the EmpiriST 2016 data
 
 set -e
-
-download() {
-    DESTDIR=$(dirname "$1")
-    DESTFN=$(basename "$1")
-    mkdir -p "${DESTDIR}"
-
-    [ -e "${DESTDIR}/${DESTFN}" ] || (wget --continue -O "${DESTDIR}/.${DESTFN}" "$2" && mv "${DESTDIR}/.${DESTFN}" "${DESTDIR}/${DESTFN}")
-}
-
+. 00_get_data
 
 #
 ### EmpiriST

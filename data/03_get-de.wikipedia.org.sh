@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
 #
-# Get de.wikipedia.org data for EmpiriST 2016
+# Get training, test, etc. data for EmpiriST 2016
 # * de.wikipedia.org Artikel, Artikeldiskussionen, Nutzerdiskussionen
 
 set -e
-
-download() {
-    DESTDIR=$(dirname "$1")
-    DESTFN=$(basename "$1")
-    mkdir -p "${DESTDIR}"
-
-    [ -e "${DESTDIR}/${DESTFN}" ] || (wget --continue -O "${DESTDIR}/.${DESTFN}" "$2" && mv "${DESTDIR}/.${DESTFN}" "${DESTDIR}/${DESTFN}")
-}
+. 00_get_data
 
 #
 ### Wikipedia
