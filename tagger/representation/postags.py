@@ -5,7 +5,7 @@ from .. import utils as _utils
 
 
 class PosTagsType(object):
-    def __init__(self, feature_type="ibk"):
+    def __init__(self, feature_type):
         self._feature_type = feature_type
         self._feature_names = None
         self._feature_length = None
@@ -14,24 +14,21 @@ class PosTagsType(object):
     def feature_type(self):
         return self._feature_type
 
-    @feature_type.setter
-    def feature_type(self, feature_type):
-        self._feature_type = feature_type
-        self._set_feature_names()
+    # @feature_type.setter
+    # def feature_type(self, feature_type):
+    #     self._feature_type = feature_type
+    #     self._set_feature_names()
 
     @property
     def feature_names(self):
         if self._feature_names is None:
-            self._set_feature_names()
+            self._feature_names = (
+                get_stts(self.feature_type) + [padding_tag])
         return self._feature_names
 
     @property
     def feature_length(self):
         return len(self.feature_names)
-
-    def _set_feature_names(self):
-        self._feature_names = (
-            get_stts(self.feature_type) + [padding_tag])
 
 padding_tag = '_padding_'
 
