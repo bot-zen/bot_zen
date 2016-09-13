@@ -10,7 +10,7 @@ import numpy as np
 
 from .representation import postags as _postags
 from .representation import qonehotchars as _qonehotchars
-from .slow_utils import _get_w2v_bigdata, _get_w2v_empirist
+from .slow_utils import w2v_big, w2v_small
 
 np.random.seed(0)  # For reproducability
 
@@ -26,23 +26,23 @@ _cmc_fnames = ["cmc_train_blog_comment.txt",
 _web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
 
 cmc_raw_flocs = [
-    path.join('../data/empirist_training_cmc/raw/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/raw/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 cmc_tokd_flocs = [
-    path.join('../data/empirist_training_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 cmc_tggd_flocs = [
-    path.join('../data/empirist_training_cmc/tagged/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/tagged/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 
 web_raw_flocs = [
-    path.join('../data/empirist_training_web/raw/', web_name)
+    path.join('../data/empirist/empirist_training_web/raw/', web_name)
     for web_name in _web_names]
 web_tokd_flocs = [
-    path.join('../data/empirist_training_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_training_web/tokenized/', web_name)
     for web_name in _web_names]
 web_tggd_flocs = [
-    path.join('../data/empirist_training_web/tagged/', web_name)
+    path.join('../data/empirist/empirist_training_web/tagged/', web_name)
     for web_name in _web_names]
 
 all_raw_flocs = cmc_raw_flocs + web_raw_flocs
@@ -61,23 +61,23 @@ _web_trial_fnames = ["trial006_hobby.txt",
                      "trial010_sonstige.txt"]
 
 cmc_trial_raw_flocs = [
-    path.join('../data/empirist_trial_cmc/raw/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/raw/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 cmc_trial_tokd_flocs = [
-    path.join('../data/empirist_trial_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 cmc_trial_tggd_flocs = [
-    path.join('../data/empirist_trial_cmc/tagged/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/tagged/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 
 web_trial_raw_flocs = [
-    path.join('../data/empirist_trial_web/raw/', web_name)
+    path.join('../data/empirist/empirist_trial_web/raw/', web_name)
     for web_name in _web_trial_fnames]
 web_trial_tokd_flocs = [
-    path.join('../data/empirist_trial_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_trial_web/tokenized/', web_name)
     for web_name in _web_trial_fnames]
 web_trial_tggd_flocs = [
-    path.join('../data/empirist_trial_web/tagged/', web_name)
+    path.join('../data/empirist/empirist_trial_web/tagged/', web_name)
     for web_name in _web_trial_fnames]
 
 all_trial_raw_flocs = cmc_trial_raw_flocs + web_trial_raw_flocs
@@ -93,13 +93,21 @@ _cmc_tst_fnames = ["cmc_test_blog_comment.txt",
 _web_tst_names = ["web_test_%03d.txt" % (i) for i in range(1, 13)]
 
 cmc_tst_tokd_flocs = [
-    path.join('../data/empirist_test_pos_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_test_pos_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_tst_fnames]
 web_tst_tokd_flocs = [
-    path.join('../data/empirist_test_pos_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_test_pos_web/tokenized/', web_name)
     for web_name in _web_tst_names]
 
+cmc_gold_flocs = [
+    path.join('../data/empirist/empirist_gold_cmc/tagged/', cmc_fname)
+    for cmc_fname in _cmc_tst_fnames]
+web_gold_flocs = [
+    path.join('../data/empirist/empirist_gold_web/tagged/', web_name)
+    for web_name in _web_tst_names]
 all_tst_tokd_flocs = cmc_tst_tokd_flocs + web_tst_tokd_flocs
+all_gold_flocs = cmc_gold_flocs + web_gold_flocs
+
 
 def load_raw_file(fileloc):
     """
@@ -334,7 +342,7 @@ def filter_elems(elems):
 
 
 def load_tiger_vrt_file(
-        fileloc='../data/tiger/tiger_release_aug07.corrected.16012013-empirist.vrt.bz2'):
+        fileloc='../data/tiger_release_aug07.corrected.16012013-empirist.vrt.bz2'):
     """
     Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
 
@@ -429,8 +437,8 @@ def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
         tok_elems = tok_elems[0:sample_size]
         tag_elems = tag_elems[0:sample_size]
 
-    w2v_empirist = _get_w2v_empirist()
-    w2v_bigdata = _get_w2v_bigdata()
+    w2v_empirist = w2v_small.data
+    w2v_bigdata = w2v_big.data
     x, y, xorg, yorg = [], [], [], []
 
     for eid, elem in enumerate(tok_elems):
@@ -487,8 +495,8 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
     toks, tags = load_tagged_files(flocs)
     all_tggd = (filter_elems(toks), filter_elems(tags))
     tok_elems = all_tggd[0]
-    w2v_empirist = _get_w2v_empirist()
-    w2v_bigdata = _get_w2v_bigdata()
+    w2v_empirist = w2v_small.data
+    w2v_bigdata = w2v_big.data
     x, xorg = [], []
 
     for eid, elem in enumerate(tok_elems):
@@ -535,11 +543,11 @@ def process_test_data_tagging(model, extension=".done", postagstype=None):
 
 
 def run_experiments():
-    # from empirist import slow_utils
-    # from empirist import utils
-    from empirist import network
+    # from tagger import slow_utils
+    # from tagger import utils
+    from tagger import network
     # import numpy as np
-    from empirist.representation import postags
+    from tagger.representation import postags
 
     retres = []
 
