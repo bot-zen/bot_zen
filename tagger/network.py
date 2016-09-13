@@ -83,6 +83,6 @@ def qgrid_search():
                 print("lstm_od:%i, drpt:%0.2f, nb_epc:%i, acc:%f" %
                       (lstm_output_dim, dropout, nb_epoch, compact_res(res)))
                 retres.append((lstm_output_dim, dropout, nb_epoch,
-                            compact_res(res)))
+                               compact_res(res)))
                 model.load_weights('/tmp/tmpmodel.hdf5')
     return retres
