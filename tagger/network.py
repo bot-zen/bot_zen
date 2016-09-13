@@ -41,9 +41,10 @@ def train_nn(model, toks, tags, batch_size=10,
         else:
             use_batch_size = batch_size
 
-        model.fit(np.array(_x), np.array(_y), batch_size=use_batch_size,
-                  nb_epoch=nb_epoch, verbose=verbose,
-                  show_accuracy=show_accuracy)
+        if xlen > 1:
+            model.fit(np.array(_x), np.array(_y), batch_size=use_batch_size,
+                      nb_epoch=nb_epoch, verbose=verbose,
+                      show_accuracy=show_accuracy)
 
 
 def eval_nn(model, toks, tags, verbose=1, postagstype=None):
