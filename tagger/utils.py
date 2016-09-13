@@ -98,6 +98,7 @@ cmc_tst_tokd_flocs = [
 web_tst_tokd_flocs = [
     path.join('../data/empirist/empirist_test_pos_web/tokenized/', web_name)
     for web_name in _web_tst_names]
+all_tst_tokd_flocs = cmc_tst_tokd_flocs + web_tst_tokd_flocs
 
 cmc_gold_flocs = [
     path.join('../data/empirist/empirist_gold_cmc/tagged/', cmc_fname)
@@ -105,7 +106,6 @@ cmc_gold_flocs = [
 web_gold_flocs = [
     path.join('../data/empirist/empirist_gold_web/tagged/', web_name)
     for web_name in _web_tst_names]
-all_tst_tokd_flocs = cmc_tst_tokd_flocs + web_tst_tokd_flocs
 all_gold_flocs = cmc_gold_flocs + web_gold_flocs
 
 
@@ -379,8 +379,8 @@ def load_tiger_vrt_file(
 def _sanitize_tok(tok):
     if tok == '“': tok = '"'
     elif tok == '”': tok = '"'
+    tok = re.sub('\d', '0', tok)
     return tok
-
 
 def _encode_tok(tok, suffix_length=5):
     toklen = len(tok)
@@ -447,20 +447,21 @@ def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
 
         for tokline in tokelem:
             toksline = []
-            tokens = [tok.lower() for tok in tokline.split('\n')]
+            tokens = tokline.split('\n')
             if seqlen is not None and len(tokens) != seqlen:
                 continue
 
             for tok in [_sanitize_tok(tok) for tok in tokens]:
                 tok_encd = _encode_tok(tok)
-                if tok in w2v_empirist:
-                    x_emp = w2v_empirist[tok]
+                tok_l = tok.lower()
+                if tok_l in w2v_empirist:
+                    x_emp = w2v_empirist[tok_l]
                 else:
-                    x_emp = w2v_empirist.seeded_vector(tok)
-                if tok in w2v_bigdata:
-                    x_big = w2v_bigdata[tok]
+                    x_emp = w2v_empirist.seeded_vector(tok_l)
+                if tok_l in w2v_bigdata:
+                    x_big = w2v_bigdata[tok_l]
                 else:
-                    x_big = w2v_bigdata.seeded_vector(tok)
+                    x_big = w2v_bigdata.seeded_vector(tok_l)
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
                 dummy_emp = np.zeros(
                     w2v_empirist.seeded_vector(_postags.padding_tag).shape)
@@ -504,18 +505,19 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
 
         for tokline in tokelem:
             toksline = []
-            tokens = [tok.lower() for tok in tokline.split('\n')]
+            tokens = tokline.split('\n')
 
             for tok in [_sanitize_tok(tok) for tok in tokens]:
                 tok_encd = _encode_tok(tok)
-                if tok in w2v_empirist:
-                    x_emp = w2v_empirist[tok]
+                tok_l = tok.lower()
+                if tok_l in w2v_empirist:
+                    x_emp = w2v_empirist[tok_l]
                 else:
-                    x_emp = w2v_empirist.seeded_vector(tok)
-                if tok in w2v_bigdata:
-                    x_big = w2v_bigdata[tok]
+                    x_emp = w2v_empirist.seeded_vector(tok_l)
+                if tok_l in w2v_bigdata:
+                    x_big = w2v_bigdata[tok_l]
                 else:
-                    x_big = w2v_bigdata.seeded_vector(tok)
+                    x_big = w2v_bigdata.seeded_vector(tok_l)
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
             x.append(toksline)
             xorg.append(tokline)
