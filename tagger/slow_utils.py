@@ -1,34 +1,29 @@
+import logging
+
+from . import config, logger, CONFIG_TASK, CONFIG_ENV_DEFAULTS
+
+# don't spam logging with gensim warnings (during initial import)
+logging.disable(logging.INFO)
 from gensim.models.word2vec import Word2Vec
+logging.disable(logging.NOTSET)
 
 
-w2v_empirist_floc = "../data/word2vec/empirist.bin"
-w2v_bigdata_floc = "../data/word2vec/bigdata.bin"
-_w2v_empirist = None
-_w2v_bigdata = None
-
-
-def _get_w2v_empirist():
-    global _w2v_empirist
-    if _w2v_empirist is None:
-        _w2v_empirist = Word2Vec.load_word2vec_format(w2v_empirist_floc)
-    return _w2v_empirist
-
-
-def _get_w2v_bigdata():
-    global _w2v_bigdata
-    if _w2v_bigdata is None:
-        _w2v_bigdata = Word2Vec.load_word2vec_format(w2v_bigdata_floc)
-    return _w2v_bigdata
-
-
-def w2vs():
+class W2V():
     """
-    Load the preprocessed word2vec data for the empirist task.
-
-    Returns:
-        w2v_emp, w2v_big
-
-        w2v_emp: trained on the empirist trainig data
-        w2v_big: trained on big wikipedia data
+    helper class to read word2vec files.
     """
-    return _get_w2v_empirist(), _get_w2v_bigdata()
+    def __init__(self, floc):
+        self.floc = floc
+        self._data = None
+        logger.debug(floc)
+
+    @property
+    def data(self):
+        if self._data is None:
+            self._data = Word2Vec.load_word2vec_format(self.floc)
+        return self._data
+
+w2v_small = W2V(config.get(CONFIG_TASK, 'w2v_small_floc',
+                           vars=CONFIG_ENV_DEFAULTS))
+w2v_big = W2V(config.get(CONFIG_TASK, 'w2v_big_floc',
+                         vars=CONFIG_ENV_DEFAULTS))
