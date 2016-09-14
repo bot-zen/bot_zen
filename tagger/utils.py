@@ -407,7 +407,8 @@ def _nearby_tok(w2v, tok, tokid, tokens):
     if tok in w2v:
         retmat = w2v[tok]
     else:
-        retmat = w2v.most_similar(_nearby_collocs(tokens, tokid), topn=False)
+        toks = [_tok for _tok in tokens if _tok in w2v]
+        retmat = w2v.most_similar(_nearby_collocs(toks, tokid), topn=False)
     return retmat
 
 
