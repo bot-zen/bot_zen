@@ -8,6 +8,7 @@ from os import path
 
 import numpy as np
 
+from . import logger
 from .representation import postags as _postags
 from .representation import qonehotchars as _qonehotchars
 from .slow_utils import w2v_big, w2v_small
@@ -390,25 +391,25 @@ def _encode_tok(tok, suffix_length=5):
     return _qonehotchars.encode(stoken).reshape(800,)
 
 
-def _nearby_collocs(seq, sid, before=5, after=5):
-    if sid-before < 0:
-        start = 0
-    else:
-        start = sid-before
-
-    if sid+after > len(seq):
-        end = None
-    else:
-        end = sid+1+after
-    return seq[start:sid]+seq[sid+1:end]
-
-
 def _nearby_tok(w2v, tok, tokid, tokens):
     if tok in w2v:
         retmat = w2v[tok]
     else:
-        toks = [_tok for _tok in tokens if _tok in w2v]
-        retmat = w2v.most_similar(_nearby_collocs(toks, tokid), topn=False)
+        nearby_before = [_tok for _tok in tokens[:tokid] if _tok in w2v]
+        nearby_after = [_tok for _tok in tokens[tokid+1:] if _tok in w2v]
+        before_idx = 0
+        if len(nearby_before) > 5:
+            before_idx = len(nearby_before)-6
+        nearby = ((nearby_before + nearby_after)[before_idx:])[0:10]
+
+        if nearby:
+            retmat = w2v[w2v.most_similar(nearby, topn=1)[0][0]]
+            logger.debug("\ntokens: %s\n|%s #%s# %s\nnearby tokens: %s" %
+                         (str(tokens), str(nearby_before), tok,
+                          str(nearby_after), nearby))
+        else:
+            retmat = w2v.seeded_vector(tok)
+            logger.debug("no tokens: %s" % (str(tokens)))
     return retmat
 
 
