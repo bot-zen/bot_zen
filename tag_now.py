@@ -46,4 +46,5 @@ process_test_data_tagging(model, extension=".emptig",
 retres.append(('emptig', res_emptig))
 
 print(retres)
+print(network.compact_res(retres[0][1]))
 exit(0)
