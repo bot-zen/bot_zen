@@ -382,11 +382,33 @@ def _sanitize_tok(tok):
     tok = re.sub('\d', '0', tok)
     return tok
 
+
 def _encode_tok(tok, suffix_length=5):
     toklen = len(tok)
     stoken = ''.join([" " * (suffix_length - toklen), tok[0:suffix_length],
                       tok[-suffix_length:], " " * (suffix_length - toklen)])
     return _qonehotchars.encode(stoken).reshape(800,)
+
+
+def _nearby_collocs(seq, sid, before=5, after=5):
+    if sid-before < 0:
+        start = 0
+    else:
+        start = sid-before
+
+    if sid+after > len(seq):
+        end = None
+    else:
+        end = sid+1+after
+    return seq[start:sid]+seq[sid+1:end]
+
+
+def _nearby_tok(w2v, tok, tokid, tokens):
+    if tok in w2v:
+        retmat = w2v[tok]
+    else:
+        retmat = w2v.most_similar(_nearby_collocs(tokens, tokid), topn=False)
+    return retmat
 
 
 def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
@@ -451,17 +473,13 @@ def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
             if seqlen is not None and len(tokens) != seqlen:
                 continue
 
-            for tok in [_sanitize_tok(tok) for tok in tokens]:
+            for tokid, tok in enumerate([_sanitize_tok(tok) for tok in tokens]):
                 tok_encd = _encode_tok(tok)
                 tok_l = tok.lower()
-                if tok_l in w2v_empirist:
-                    x_emp = w2v_empirist[tok_l]
-                else:
-                    x_emp = w2v_empirist.seeded_vector(tok_l)
-                if tok_l in w2v_bigdata:
-                    x_big = w2v_bigdata[tok_l]
-                else:
-                    x_big = w2v_bigdata.seeded_vector(tok_l)
+                x_emp = _nearby_tok(w2v_empirist, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
+                x_big = _nearby_tok(w2v_bigdata, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
                 dummy_emp = np.zeros(
                     w2v_empirist.seeded_vector(_postags.padding_tag).shape)
