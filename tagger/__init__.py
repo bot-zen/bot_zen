@@ -19,7 +19,7 @@ for key, val in os.environ.items():
         try:
             config.set('BOTZEN', key[7:], val)
         except ValueError:
-            print("failed to use config value for %s" % (str({key:value})),
+            print("failed to use config value for %s" % (str({key:val})),
                   file=sys.stderr)
             exit(1)
 
@@ -31,7 +31,8 @@ CONFIG_TASK = config.get('DEFAULT', 'task', vars=CONFIG_ENV_DEFAULTS,
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-        format="%(filename)s,%(funcName)8s(),ln%(lineno) 3s: %(message)s",
-        level=getattr(logging,config.get(CONFIG_TASK, 'logging_level',
-                      vars=CONFIG_ENV_DEFAULTS)))
+    datefmt='%H:%M:%S',
+    format="%(asctime)s %(filename)14s,%(funcName)8s(),ln%(lineno) 3s: %(message)s",
+    level=getattr(logging, config.get(CONFIG_TASK, 'logging_level',
+                                      vars=CONFIG_ENV_DEFAULTS)))
 logger.debug("config read, logging started...")
