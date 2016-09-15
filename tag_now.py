@@ -9,7 +9,7 @@ from tagger.utils import (
 # import numpy as np
 
 
-logger.info('Starting experient...')
+logger.info('Starting experient.')
 retres = []
 
 postagstype_ibk = postags.PosTagsType(feature_type="ibk")

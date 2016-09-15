@@ -1,9 +1,10 @@
 import numpy as np
 
-from . import utils
+from . import utils, logger
 
 
 def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
+    logger.info("building nn...")
     from keras.models import Sequential
 
     from keras.layers.core import Dropout, TimeDistributedDense
@@ -22,6 +23,7 @@ def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
     model.add(Dropout(dropout))
     model.add(TimeDistributedDense(output_dim, activation="softmax"))
     model.compile(loss="categorical_crossentropy", optimizer="rmsprop")
+    logger.info("building nn...done.")
     return model
 
 
