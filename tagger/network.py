@@ -19,7 +19,11 @@ def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
 
     model = Sequential()
     model.add(LSTM(lstm_output_dim, input_dim=input_dim,
-                   return_sequences=return_sequence, stateful=False))
+                   return_sequences=True, stateful=False))
+    model.add(Dropout(0.5))
+    model.add(LSTM(lstm_output_dim, input_dim=lstm_output_dim,
+                   return_sequences=True, stateful=False,
+                   activation='sigmoid', inner_activation='hard_sigmoid'))
     model.add(Dropout(dropout))
     model.add(TimeDistributedDense(output_dim, activation="softmax"))
     model.compile(loss="categorical_crossentropy", optimizer="rmsprop")
