@@ -30,11 +30,19 @@ nb_epoch = 20
 batch_size = 20
 model = network.build_nn(output_dim=postagstype.feature_length,
                          lstm_output_dim=1024, dropout=dropout)
-# model.save_weights('/tmp/emptig_plain.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_plain.hdf5',
+                       overwrite=True)
+except:
+    pass
 
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emp_trained.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emp_trained.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emp")
 # res_emp2 = network.eval_nn(model, toks_gold, tags_gold,
@@ -48,22 +56,27 @@ process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
 batch_size = 50
 network.train_nn(model, toks_tig, tags_tig, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-0.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-0.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptig")
 # res_emptig = network.eval_nn(model, toks_gold, tags_gold,
 #                              postagstype=postagstype)
 # logger.info(network.compact_res(res_emptig))
-
-# process_test_data_tagging(model, extension=".emptig",
-#                           postagstype=postagstype_ibk)
 # retres.append(('emptig', res_emptig))
 
 # ## ###
 batch_size = 20
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-1.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-1.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptigemp1")
 # res_emptigemp = network.eval_nn(model, toks_gold, tags_gold,
@@ -73,7 +86,11 @@ process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
 
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-2.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-2.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptigemp2")
 # res_emptigempemp = network.eval_nn(model, toks_gold, tags_gold,
@@ -83,7 +100,11 @@ process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
 
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-3.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-3.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptigemp3")
 # res_emptigempempemp = network.eval_nn(model, toks_gold, tags_gold,
@@ -93,7 +114,11 @@ process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
 
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-4.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-4.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptigemp4")
 # res_emptigemp4 = network.eval_nn(model, toks_gold, tags_gold,
@@ -103,7 +128,11 @@ process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
 
 network.train_nn(model, toks, tags, batch_size=batch_size,
                  nb_epoch=nb_epoch, postagstype=postagstype)
-model.save_weights('/tmp/emptig_retrained-5.hdf5', overwrite=True)
+try:
+    model.save_weights('/global/lv70912/estemle/emptig_retrained-5.hdf5',
+                       overwrite=True)
+except:
+    pass
 process_test_data_tagging(model, postagstype, all_postwita_tst_flocs,
                           extension=".emptigemp5")
 # res_emptigemp5 = network.eval_nn(model, toks_gold, tags_gold,
