@@ -3,7 +3,7 @@ import numpy as np
 from . import utils, logger
 
 
-def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
+def build_nn(input_dim=2280, output_dim=None, lstm_output_dim=512, dropout=0.5):
     logger.info("building nn...")
     from keras.models import Sequential
 
@@ -19,11 +19,7 @@ def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
 
     model = Sequential()
     model.add(LSTM(lstm_output_dim, input_dim=input_dim,
-                   return_sequences=True, stateful=False))
-    model.add(Dropout(0.5))
-    model.add(LSTM(lstm_output_dim, input_dim=lstm_output_dim,
-                   return_sequences=True, stateful=False,
-                   activation='sigmoid', inner_activation='hard_sigmoid'))
+                   return_sequences=return_sequence, stateful=False))
     model.add(Dropout(dropout))
     model.add(TimeDistributedDense(output_dim, activation="softmax"))
     model.compile(loss="categorical_crossentropy", optimizer="rmsprop")
@@ -34,9 +30,10 @@ def build_nn(input_dim=1800, output_dim=None, lstm_output_dim=512, dropout=0.5):
 def train_nn(model, toks, tags, batch_size=10,
              nb_epoch=10, verbose=1, show_accuracy=True, postagstype=None):
     # toks, tags = utils.load_tagged_files(utils.all_tggd_flocs)
+    logger.info('training...')
     x, _, _, _ = utils.training_data_tagging(toks, tags,
                                              postagstype=postagstype)
-    xlens = list(set([len(_x) for _x in x]))
+    xlens = sorted(set([len(_x) for _x in x]))
     for xlenid, xlen in enumerate(xlens):
         _x, _y, _, _yorg = utils.training_data_tagging(toks, tags,
                                                        seqlen=int(xlen),
@@ -51,7 +48,7 @@ def train_nn(model, toks, tags, batch_size=10,
             model.fit(np.array(_x), np.array(_y), batch_size=use_batch_size,
                       nb_epoch=nb_epoch, verbose=verbose,
                       show_accuracy=show_accuracy)
-
+    logger.info('...training done.')
 
 def eval_nn(model, toks, tags, verbose=1, postagstype=None):
     retres = []
