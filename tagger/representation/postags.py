@@ -1,6 +1,7 @@
 import numpy as _np
 
 from . import postags as _postags
+from .. import logger
 from .. import utils as _utils
 
 
@@ -23,7 +24,7 @@ class PosTagsType(object):
     def feature_names(self):
         if self._feature_names is None:
             self._feature_names = (
-                get_stts(self.feature_type) + [padding_tag])
+                get_ts(self.feature_type) + [padding_tag])
         return self._feature_names
 
     @property
@@ -34,11 +35,13 @@ padding_tag = '_padding_'
 
 stts_ibk_floc = "../data/stts_ibk.txt"
 stts_1999_floc = "../data/stts_1999.txt"
+postwita_floc = "../data/tagset-postwita.txt"
 
 _stts_ibk = None
 _stts_1999 = None
 _stts_ibk_used = None
 _stts_1999_used = None
+_postwita = None
 
 
 def _get_stts_ibk(fileloc=stts_ibk_floc):
@@ -55,6 +58,14 @@ def _get_stts_1999(fileloc=stts_1999_floc):
         _stts_1999 = sorted([line.strip() for line in open(fileloc).readlines()
                              if line])
     return _stts_1999
+
+
+def _get_postwita(fileloc=postwita_floc):
+    global _postwita
+    if _postwita is None:
+        _postwita = sorted([line.strip() for line in open(fileloc).readlines()
+                            if line])
+    return _postwita
 
 
 def _get_stts_ibk_used():
@@ -77,7 +88,7 @@ def _get_stts_1999_used():
     return _stts_1999_used
 
 
-def get_stts(type="ibk"):
+def get_ts(type):
     """
     Return type of stts.
 
@@ -87,10 +98,10 @@ def get_stts(type="ibk"):
     Returns:
         list of postags.
     """
-    return getattr(_postags, '_get_stts_'+type)()
+    return getattr(_postags, '_get_'+type)()
 
 
-def encode(postags, postagstype=None):
+def encode(postags, postagstype):
     """
     Converts postags to a one-hot matrix representation.
 
@@ -101,15 +112,15 @@ def encode(postags, postagstype=None):
     Returns:
         one-hot matrix of postags
     """
-    if postagstype is None:
-        postagstype = PosTagsType()
+    # if postagstype is None:
+    #    postagstype = PosTagsType()
     matrix = _np.zeros((len(postags), postagstype.feature_length)).astype(bool)
     for rdx, postag in enumerate(postags):
         if postag in postagstype.feature_names:
             index = postagstype.feature_names.index(postag)
         else:
             index = _np.random.randint(1, postagstype.feature_length) - 1
-            print("Warning: encoded %s as %s" % (
+            logger.info("Warning: encoded %s as %s" % (
                 postag, postagstype.feature_names[index]))
         matrix[rdx, index] = True
     return matrix
