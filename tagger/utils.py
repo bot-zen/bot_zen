@@ -49,6 +49,9 @@ web_tggd_flocs = [
 all_raw_flocs = cmc_raw_flocs + web_raw_flocs
 all_tokd_flocs = cmc_tokd_flocs + web_tokd_flocs
 all_tggd_flocs = cmc_tggd_flocs + web_tggd_flocs
+all_postwita_tggd_flocs = (['../data/postwita/postwita.vrt',
+                            '../data/postwita/didi.vrt'])
+all_postwita_tst_flocs = (['../data/postwita/tst.txt'])
 
 _cmc_trial_fnames = ["professional_chat.txt",
                      "social_chat.txt",
@@ -384,11 +387,11 @@ def _sanitize_tok(tok):
     return tok
 
 
-def _encode_tok(tok, suffix_length=5):
+def _encode_tok(tok, suffix_length=8):
     toklen = len(tok)
     stoken = ''.join([" " * (suffix_length - toklen), tok[0:suffix_length],
                       tok[-suffix_length:], " " * (suffix_length - toklen)])
-    return _qonehotchars.encode(stoken).reshape(800,)
+    return _qonehotchars.encode(stoken).reshape(1280,)
 
 
 def _nearby_tok(w2v, tok, tokid, tokens):
@@ -527,17 +530,13 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
             toksline = []
             tokens = tokline.split('\n')
 
-            for tok in [_sanitize_tok(tok) for tok in tokens]:
+            for tokid, tok in enumerate([_sanitize_tok(tok) for tok in tokens]):
                 tok_encd = _encode_tok(tok)
                 tok_l = tok.lower()
-                if tok_l in w2v_empirist:
-                    x_emp = w2v_empirist[tok_l]
-                else:
-                    x_emp = w2v_empirist.seeded_vector(tok_l)
-                if tok_l in w2v_bigdata:
-                    x_big = w2v_bigdata[tok_l]
-                else:
-                    x_big = w2v_bigdata.seeded_vector(tok_l)
+                x_emp = _nearby_tok(w2v_empirist, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
+                x_big = _nearby_tok(w2v_bigdata, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
             x.append(toksline)
             xorg.append(tokline)
@@ -545,8 +544,9 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
     return x, xorg
 
 
-def process_test_data_tagging(model, extension=".done", postagstype=None):
-    for floc in all_tst_tokd_flocs:
+def process_test_data_tagging(model, postagstype, flocs, extension=".done"):
+    # for floc in all_tst_tokd_flocs:
+    for floc in flocs:
         elems, elems_org = get_test_data_tagging(flocs=[floc])
         prcd_floc = floc + extension
         with open(prcd_floc, 'w') as prcdh:
