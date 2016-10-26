@@ -368,14 +368,15 @@ def load_tiger_vrt_file(
     retlist = list()
     tbuffy = list()
     with bz2.open(fileloc, mode='rt') as fp:
-        for line in fp:
+        for lid, line in enumerate([line.strip() for line in fp]):
             if line.startswith('<s>'):
                 retlist += process_tbuffy(tbuffy)
                 tbuffy = list()
             elif line.startswith('</s>'):
                 pass
             else:
-                tbuffy.append(line.strip())
+                logger.debug("%8d\t%s" % (lid+1, line))
+                tbuffy.append(line)
     retlist += process_tbuffy(tbuffy)
     return _process_tagged_elems([retlist])
 
