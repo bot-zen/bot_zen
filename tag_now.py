@@ -23,7 +23,7 @@ toks, tags = load_tagged_files(all_postwita_tggd_flocs)
 # toks_trial, tags_trial = load_tagged_files(all_trial_tggd_flocs)
 # toks_gold, tags_gold = load_tagged_files(all_gold_flocs)
 toks_tig, tags_tig = load_tiger_vrt_file(
-    fileloc='../data/postwita/ud-treebanks-v1.3-it.vrt.bz2')
+    fileloc='../data/postwita/ud-treebanks-v1.3-it_didi-postrain.vrt.bz2')
 dropout = 0.1
 nb_epoch = 20
 
