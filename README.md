@@ -1,5 +1,9 @@
 # bot.zet PoS tagger
 
+[![Code Climate](https://img.shields.io/codeclimate/github/bot-zen/tagger.svg)][codeclimate]
+
+[codeclimate]: https://codeclimate.com/github/bot-zen/tagger
+
 **minimally-deep learning approach to PoS tagging**
 
 
