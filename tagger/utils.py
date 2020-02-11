@@ -8,9 +8,10 @@ from os import path
 
 import numpy as np
 
+from . import logger
 from .representation import postags as _postags
 from .representation import qonehotchars as _qonehotchars
-from .slow_utils import _get_w2v_bigdata, _get_w2v_empirist
+from .slow_utils import w2v_big, w2v_small
 
 np.random.seed(0)  # For reproducability
 
@@ -26,28 +27,31 @@ _cmc_fnames = ["cmc_train_blog_comment.txt",
 _web_names = ["web_train_%03d.txt" % (i) for i in range(1, 12)]
 
 cmc_raw_flocs = [
-    path.join('../data/empirist_training_cmc/raw/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/raw/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 cmc_tokd_flocs = [
-    path.join('../data/empirist_training_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 cmc_tggd_flocs = [
-    path.join('../data/empirist_training_cmc/tagged/', cmc_fname)
+    path.join('../data/empirist/empirist_training_cmc/tagged/', cmc_fname)
     for cmc_fname in _cmc_fnames]
 
 web_raw_flocs = [
-    path.join('../data/empirist_training_web/raw/', web_name)
+    path.join('../data/empirist/empirist_training_web/raw/', web_name)
     for web_name in _web_names]
 web_tokd_flocs = [
-    path.join('../data/empirist_training_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_training_web/tokenized/', web_name)
     for web_name in _web_names]
 web_tggd_flocs = [
-    path.join('../data/empirist_training_web/tagged/', web_name)
+    path.join('../data/empirist/empirist_training_web/tagged/', web_name)
     for web_name in _web_names]
 
 all_raw_flocs = cmc_raw_flocs + web_raw_flocs
 all_tokd_flocs = cmc_tokd_flocs + web_tokd_flocs
 all_tggd_flocs = cmc_tggd_flocs + web_tggd_flocs
+all_postwita_tggd_flocs = (['../data/postwita/postwita.vrt',
+                            '../data/postwita/didi.vrt'])
+all_postwita_tst_flocs = (['../data/postwita/tst.txt'])
 
 _cmc_trial_fnames = ["professional_chat.txt",
                      "social_chat.txt",
@@ -61,23 +65,23 @@ _web_trial_fnames = ["trial006_hobby.txt",
                      "trial010_sonstige.txt"]
 
 cmc_trial_raw_flocs = [
-    path.join('../data/empirist_trial_cmc/raw/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/raw/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 cmc_trial_tokd_flocs = [
-    path.join('../data/empirist_trial_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 cmc_trial_tggd_flocs = [
-    path.join('../data/empirist_trial_cmc/tagged/', cmc_fname)
+    path.join('../data/empirist/empirist_trial_cmc/tagged/', cmc_fname)
     for cmc_fname in _cmc_trial_fnames]
 
 web_trial_raw_flocs = [
-    path.join('../data/empirist_trial_web/raw/', web_name)
+    path.join('../data/empirist/empirist_trial_web/raw/', web_name)
     for web_name in _web_trial_fnames]
 web_trial_tokd_flocs = [
-    path.join('../data/empirist_trial_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_trial_web/tokenized/', web_name)
     for web_name in _web_trial_fnames]
 web_trial_tggd_flocs = [
-    path.join('../data/empirist_trial_web/tagged/', web_name)
+    path.join('../data/empirist/empirist_trial_web/tagged/', web_name)
     for web_name in _web_trial_fnames]
 
 all_trial_raw_flocs = cmc_trial_raw_flocs + web_trial_raw_flocs
@@ -93,13 +97,21 @@ _cmc_tst_fnames = ["cmc_test_blog_comment.txt",
 _web_tst_names = ["web_test_%03d.txt" % (i) for i in range(1, 13)]
 
 cmc_tst_tokd_flocs = [
-    path.join('../data/empirist_test_pos_cmc/tokenized/', cmc_fname)
+    path.join('../data/empirist/empirist_test_pos_cmc/tokenized/', cmc_fname)
     for cmc_fname in _cmc_tst_fnames]
 web_tst_tokd_flocs = [
-    path.join('../data/empirist_test_pos_web/tokenized/', web_name)
+    path.join('../data/empirist/empirist_test_pos_web/tokenized/', web_name)
     for web_name in _web_tst_names]
-
 all_tst_tokd_flocs = cmc_tst_tokd_flocs + web_tst_tokd_flocs
+
+cmc_gold_flocs = [
+    path.join('../data/empirist/empirist_gold_cmc/tagged/', cmc_fname)
+    for cmc_fname in _cmc_tst_fnames]
+web_gold_flocs = [
+    path.join('../data/empirist/empirist_gold_web/tagged/', web_name)
+    for web_name in _web_tst_names]
+all_gold_flocs = cmc_gold_flocs + web_gold_flocs
+
 
 def load_raw_file(fileloc):
     """
@@ -334,7 +346,7 @@ def filter_elems(elems):
 
 
 def load_tiger_vrt_file(
-        fileloc='../data/tiger/tiger_release_aug07.corrected.16012013-empirist.vrt.bz2'):
+        fileloc='../data/tiger_release_aug07.corrected.16012013-empirist.vrt.bz2'):
     """
     Load a bz2 compressed tiger vrt (tok\tlem\tpos) file.
 
@@ -356,14 +368,15 @@ def load_tiger_vrt_file(
     retlist = list()
     tbuffy = list()
     with bz2.open(fileloc, mode='rt') as fp:
-        for line in fp:
+        for lid, line in enumerate([line.strip() for line in fp]):
             if line.startswith('<s>'):
                 retlist += process_tbuffy(tbuffy)
                 tbuffy = list()
             elif line.startswith('</s>'):
                 pass
             else:
-                tbuffy.append(line.strip())
+                logger.debug("%8d\t%s" % (lid+1, line))
+                tbuffy.append(line)
     retlist += process_tbuffy(tbuffy)
     return _process_tagged_elems([retlist])
 
@@ -371,14 +384,37 @@ def load_tiger_vrt_file(
 def _sanitize_tok(tok):
     if tok == '“': tok = '"'
     elif tok == '”': tok = '"'
+    tok = re.sub('\d', '0', tok)
     return tok
 
 
-def _encode_tok(tok, suffix_length=5):
+def _encode_tok(tok, suffix_length=8):
     toklen = len(tok)
     stoken = ''.join([" " * (suffix_length - toklen), tok[0:suffix_length],
                       tok[-suffix_length:], " " * (suffix_length - toklen)])
-    return _qonehotchars.encode(stoken).reshape(800,)
+    return _qonehotchars.encode(stoken).reshape(1280,)
+
+
+def _nearby_tok(w2v, tok, tokid, tokens):
+    if tok in w2v:
+        retmat = w2v[tok]
+    else:
+        nearby_before = [_tok for _tok in tokens[:tokid] if _tok in w2v]
+        nearby_after = [_tok for _tok in tokens[tokid+1:] if _tok in w2v]
+        before_idx = 0
+        if len(nearby_before) > 5:
+            before_idx = len(nearby_before)-6
+        nearby = ((nearby_before + nearby_after)[before_idx:])[0:10]
+
+        if nearby:
+            retmat = w2v[w2v.most_similar(nearby, topn=1)[0][0]]
+            logger.debug("\ntokens: %s\n|%s #%s# %s\nnearby tokens: %s" %
+                         (str(tokens), str(nearby_before), tok,
+                          str(nearby_after), nearby))
+        else:
+            retmat = w2v.seeded_vector(tok)
+            logger.debug("no tokens: %s" % (str(tokens)))
+    return retmat
 
 
 def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
@@ -429,8 +465,8 @@ def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
         tok_elems = tok_elems[0:sample_size]
         tag_elems = tag_elems[0:sample_size]
 
-    w2v_empirist = _get_w2v_empirist()
-    w2v_bigdata = _get_w2v_bigdata()
+    w2v_empirist = w2v_small.data
+    w2v_bigdata = w2v_big.data
     x, y, xorg, yorg = [], [], [], []
 
     for eid, elem in enumerate(tok_elems):
@@ -439,20 +475,17 @@ def training_data_tagging(toks, tags, sample_size=-1, seqlen=None,
 
         for tokline in tokelem:
             toksline = []
-            tokens = [tok.lower() for tok in tokline.split('\n')]
+            tokens = tokline.split('\n')
             if seqlen is not None and len(tokens) != seqlen:
                 continue
 
-            for tok in [_sanitize_tok(tok) for tok in tokens]:
+            for tokid, tok in enumerate([_sanitize_tok(tok) for tok in tokens]):
                 tok_encd = _encode_tok(tok)
-                if tok in w2v_empirist:
-                    x_emp = w2v_empirist[tok]
-                else:
-                    x_emp = w2v_empirist.seeded_vector(tok)
-                if tok in w2v_bigdata:
-                    x_big = w2v_bigdata[tok]
-                else:
-                    x_big = w2v_bigdata.seeded_vector(tok)
+                tok_l = tok.lower()
+                x_emp = _nearby_tok(w2v_empirist, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
+                x_big = _nearby_tok(w2v_bigdata, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
                 dummy_emp = np.zeros(
                     w2v_empirist.seeded_vector(_postags.padding_tag).shape)
@@ -487,8 +520,8 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
     toks, tags = load_tagged_files(flocs)
     all_tggd = (filter_elems(toks), filter_elems(tags))
     tok_elems = all_tggd[0]
-    w2v_empirist = _get_w2v_empirist()
-    w2v_bigdata = _get_w2v_bigdata()
+    w2v_empirist = w2v_small.data
+    w2v_bigdata = w2v_big.data
     x, xorg = [], []
 
     for eid, elem in enumerate(tok_elems):
@@ -496,18 +529,15 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
 
         for tokline in tokelem:
             toksline = []
-            tokens = [tok.lower() for tok in tokline.split('\n')]
+            tokens = tokline.split('\n')
 
-            for tok in [_sanitize_tok(tok) for tok in tokens]:
+            for tokid, tok in enumerate([_sanitize_tok(tok) for tok in tokens]):
                 tok_encd = _encode_tok(tok)
-                if tok in w2v_empirist:
-                    x_emp = w2v_empirist[tok]
-                else:
-                    x_emp = w2v_empirist.seeded_vector(tok)
-                if tok in w2v_bigdata:
-                    x_big = w2v_bigdata[tok]
-                else:
-                    x_big = w2v_bigdata.seeded_vector(tok)
+                tok_l = tok.lower()
+                x_emp = _nearby_tok(w2v_empirist, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
+                x_big = _nearby_tok(w2v_bigdata, tok_l, tokid,
+                                    [_sanitize_tok(tok) for tok in tokens])
                 toksline.append(np.concatenate((x_emp, x_big, tok_encd)))
             x.append(toksline)
             xorg.append(tokline)
@@ -515,8 +545,9 @@ def get_test_data_tagging(flocs=all_tst_tokd_flocs):
     return x, xorg
 
 
-def process_test_data_tagging(model, extension=".done", postagstype=None):
-    for floc in all_tst_tokd_flocs:
+def process_test_data_tagging(model, postagstype, flocs, extension=".done"):
+    # for floc in all_tst_tokd_flocs:
+    for floc in flocs:
         elems, elems_org = get_test_data_tagging(flocs=[floc])
         prcd_floc = floc + extension
         with open(prcd_floc, 'w') as prcdh:
@@ -535,11 +566,11 @@ def process_test_data_tagging(model, extension=".done", postagstype=None):
 
 
 def run_experiments():
-    # from empirist import slow_utils
-    # from empirist import utils
-    from empirist import network
+    # from tagger import slow_utils
+    # from tagger import utils
+    from tagger import network
     # import numpy as np
-    from empirist.representation import postags
+    from tagger.representation import postags
 
     retres = []
 
